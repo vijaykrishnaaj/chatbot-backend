@@ -30,8 +30,6 @@ app.get("/models", async (req, res) => {
 app.post("/chat", async (req, res) => {
   const userMessage = req.body.message;
 
-  console.log("Incoming:", userMessage);
-
   if (!userMessage) {
     return res.json({ reply: "Please send a message." });
   }
@@ -53,33 +51,32 @@ app.post("/chat", async (req, res) => {
 You are Gustora Bot, assistant of Gustora Foods Pvt Ltd.
 
 IDENTITY:
-- You are Gustora Bot (only mention when asked)
-- Never say you are AI or Google
+- Only mention identity if user asks "who are you"
+- Never say you are AI, model, or Google
 
 ROLE:
 - Help users choose pasta
-- Suggest products
+- Recommend products
 - Guide purchase
 
 BEHAVIOR:
-- Answer the user's question directly
-- Recommend relevant products
-- Ask follow-up questions
-- Keep answers short and friendly
+- Always answer the user's question
+- Recommend 1–2 relevant products
+- Ask 1 follow-up question
+- Keep responses short, friendly, helpful
 
-PRODUCT KNOWLEDGE:
-- Short pasta: Penne, Fusilli, Macaroni
-- Long pasta: Spaghetti, Linguine
-- Healthy: Multimillet, Quinoa
-- Kids pasta
-- Instant pasta
-- Sauces
-
-RULE:
-- If question is unrelated → say:
+RULES:
+- If user mentions kids → suggest Kids Pasta or Fusilli
+- If user wants healthy → suggest Multimillet or Quinoa pasta
+- If user wants quick → suggest Instant pasta
+- If unrelated → say:
 "I can help only with Gustora products and services."
 
-USER MESSAGE:
+EXAMPLE STYLE:
+"Great choice! Fusilli works really well for kids 😊  
+Do you want something quick or a healthy option?"
+
+USER:
 ${userMessage}
 `
                 }
@@ -95,36 +92,61 @@ ${userMessage}
 
     const data = await response.json();
 
-    console.log("Gemini:", JSON.stringify(data, null, 2));
+    console.log("FULL RESPONSE:", JSON.stringify(data, null, 2));
 
-    let reply = "No response from AI";
+    /* ------------------ SAFE HANDLING ------------------ */
 
-    if (data.candidates && data.candidates.length > 0) {
-      reply = data.candidates[0].content.parts[0].text;
-    } else if (data.error) {
-      reply = "API Error: " + data.error.message;
+    // API error
+    if (data.error) {
+      return res.json({
+        reply: "⚠️ " + data.error.message
+      });
     }
 
- 
-    // 🏷 Ensure branding always visible
-    if (!lower.includes("gustora")) {
-      reply = "Gustora Bot 👋\n\n" + reply;
+    // No valid response
+    if (
+      !data.candidates ||
+      !data.candidates[0] ||
+      !data.candidates[0].content ||
+      !data.candidates[0].content.parts
+    ) {
+      return res.json({
+        reply: "⚠️ No response from AI. Please try again."
+      });
     }
 
-    // 📧 Customer support handling
+    let reply = data.candidates[0].content.parts[0].text;
+
+    /* ------------------ LIGHT CONTROL (SAFE) ------------------ */
+
+    const lower = reply.toLowerCase();
+
+    // Only fix if model reveals identity wrongly
+    if (
+      lower.includes("language model") ||
+      lower.includes("trained by google")
+    ) {
+      reply =
+        "I am Gustora Bot, your assistant for Gustora Foods Pvt Ltd. How can I help you today?";
+    }
+
+    // Customer support
     if (
       lower.includes("complaint") ||
       lower.includes("issue") ||
       lower.includes("problem")
     ) {
-      reply += "\n\nFor assistance, contact: branding@gustora.co";
+      reply += "\n\nFor support, contact: branding@gustora.co";
     }
 
     res.json({ reply });
 
   } catch (error) {
-    console.error("Server error:", error);
-    res.json({ reply: "Server error. Please try again." });
+    console.error("🔥 SERVER ERROR:", error);
+
+    res.json({
+      reply: "⚠️ Server error. Please try again in a moment."
+    });
   }
 });
 
