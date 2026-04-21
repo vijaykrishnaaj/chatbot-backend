@@ -105,17 +105,7 @@ ${userMessage}
       reply = "API Error: " + data.error.message;
     }
 
-    /* ------------------ EXTRA CONTROL (VERY IMPORTANT) ------------------ */
-
-   const lower = reply.toLowerCase();
-
-// Only fix identity IF it's clearly wrong
-if (
-  lower.includes("language model") ||
-  lower.includes("trained by google")
-) {
-  reply = "I am Gustora Bot, your assistant for Gustora Foods Pvt Ltd. How can I help you today?";
-}
+ 
     // 🏷 Ensure branding always visible
     if (!lower.includes("gustora")) {
       reply = "Gustora Bot 👋\n\n" + reply;
