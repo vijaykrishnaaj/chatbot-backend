@@ -12,7 +12,13 @@ app.use(cors());
 app.get("/", (req, res) => {
   res.send("Chatbot backend is running");
 });
-
+app.get("/models", async (req, res) => {
+  const r = await fetch(
+    `https://generativelanguage.googleapis.com/v1/models?key=${process.env.API_KEY}`
+  );
+  const d = await r.json();
+  res.json(d);
+});
 // Chat route
 app.post("/chat", async (req, res) => {
   const userMessage = req.body.message;
