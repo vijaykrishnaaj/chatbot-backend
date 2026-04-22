@@ -8,39 +8,20 @@ app.use(express.json());
 app.use(cors());
 
 app.get("/", (req, res) => {
-  res.send("Gustora HuggingFace Backend Running");
+  res.send("Gustora HF Backend Running");
 });
 
 app.post("/chat", async (req, res) => {
   const userMessage = req.body.message;
 
   if (!userMessage) {
-    return res.json({ reply: "Please type a message." });
+    return res.json({ reply: "Please enter message." });
   }
 
   const prompt = `
-You are Gustora Bot, official AI assistant of Gustora Foods Pvt Ltd.
-
-Rules:
-- Only discuss Gustora products and customer support
-- Be friendly, premium and helpful
-- Suggest products smartly
-- Convert interest into purchase
-- If user asks unrelated things, politely redirect to Gustora products
-
-Products:
-- Penne Rigate
-- Fusilli
-- Macaroni
-- Spaghetti
-- Linguine
-- Whole Wheat Pasta
-- Multimillet Pasta
-- Quinoa Pasta
-- Kids Pasta
-- Instant Pasta
-- Sauces
-- Ketchup
+You are Gustora Bot, official assistant of Gustora Foods Pvt Ltd.
+Only discuss Gustora pasta, sauces, ketchup, customer support.
+Be helpful, premium, short, smart.
 
 User: ${userMessage}
 Assistant:
@@ -48,7 +29,7 @@ Assistant:
 
   try {
     const response = await fetch(
-      "https://api-inference.huggingface.co/models/google/flan-t5-large",
+      "https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium",
       {
         method: "POST",
         headers: {
@@ -56,35 +37,29 @@ Assistant:
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          inputs: prompt,
-          parameters: {
-            max_new_tokens: 180,
-            temperature: 0.7
-          }
+          inputs: prompt
         })
       }
     );
 
     const data = await response.json();
 
-    let reply = "Welcome to Gustora! How may I help you?";
+    let reply = "Welcome to Gustora. How may I help you?";
 
     if (Array.isArray(data) && data[0]?.generated_text) {
       reply = data[0].generated_text;
-    } else if (data.error) {
-      reply = "AI busy right now. Please try again shortly.";
+    }
+
+    if (data.error) {
+      reply = "AI model loading. Please retry in 20 seconds.";
     }
 
     res.json({ reply });
 
   } catch (error) {
     console.log(error);
-    res.json({ reply: "Server error. Please try again." });
+    res.json({ reply: "Server error. Please retry." });
   }
 });
 
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-  console.log("Server running on port " + PORT);
-});
+app.listen(process.env.PORT || 3000);
