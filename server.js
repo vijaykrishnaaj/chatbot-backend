@@ -8,50 +8,61 @@ app.use(express.json());
 app.use(cors());
 
 app.get("/", (req, res) => {
-  res.send("Gustora HF Backend Running");
+  res.send("Gustora OpenRouter Backend Running");
 });
 
 app.post("/chat", async (req, res) => {
   const userMessage = req.body.message;
 
   if (!userMessage) {
-    return res.json({ reply: "Please enter message." });
+    return res.json({ reply: "Please type a message." });
   }
 
-  const prompt = `
-You are Gustora Bot, official assistant of Gustora Foods Pvt Ltd.
-Only discuss Gustora pasta, sauces, ketchup, customer support.
-Be helpful, premium, short, smart.
-
-User: ${userMessage}
-Assistant:
-`;
-
   try {
-    const response = await fetch(
-      "https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.HF_API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          inputs: prompt
-        })
-      }
-    );
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "deepseek/deepseek-chat-v3-0324:free",
+        messages: [
+          {
+            role: "system",
+            content: `
+You are Gustora Bot, official AI assistant of Gustora Foods Pvt Ltd.
+
+You only help about:
+- Gustora pasta
+- sauces
+- ketchup
+- products
+- customer care
+- bulk orders
+
+Be friendly, premium, short, smart.
+Guide customer toward purchase.
+`
+          },
+          {
+            role: "user",
+            content: userMessage
+          }
+        ]
+      })
+    });
 
     const data = await response.json();
 
-    let reply = "Welcome to Gustora. How may I help you?";
+    let reply = "Welcome to Gustora.";
 
-    if (Array.isArray(data) && data[0]?.generated_text) {
-      reply = data[0].generated_text;
+    if (data.choices && data.choices.length > 0) {
+      reply = data.choices[0].message.content;
     }
 
     if (data.error) {
-      reply = "AI model loading. Please retry in 20 seconds.";
+      reply = "AI busy. Please retry.";
     }
 
     res.json({ reply });
